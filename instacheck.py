@@ -1,34 +1,12 @@
 #!/usr/local/bin/python3
 from lxml import html
 from address import find_address
-from datetime import datetime, timedelta 
+from datetime import datetime, timedelta
 import requests
 import json
 import timestring
 import login_gs
 import gspread
-
-# Logs in to Google Docs sheet and finds file name of the file to be used
-# TODO: Add ___if___ == main logic so you can pull functions from this
-"""
-def docslogin(): 
-	gc = login_gs.login()
-	filename = input("What is the filename? ")
-	sh = gc.open(filename)
-	worksheet = sh.get_worksheet(1)
-"""
-	
-gc = login_gs.login()
-#TODO: Request filename from user
-sh = gc.open("Instascore Test")
-worksheet = sh.get_worksheet(0)
-
-starttime = datetime.now()
-starttime_string = str(starttime)
-
-print(("Starting to go through sheet at %s...") % (starttime_string))
-# TODO: Also make this non hard coded in the future, pull range using similar function as below
-title_row = worksheet.range('A1:P1')
 
 def count_occupied_cells():
 	# Todo: Make this non hard coded in the future
@@ -40,8 +18,8 @@ def count_occupied_cells():
 			count+= 1
 	return count
 
-#Calculates difference and last date user posted on Instagram 
-def days_until(date): 
+#Calculates difference and last date user posted on Instagram
+def days_until(date):
 	date = timestring.Date(date)
 	date_string = str(date)
 	date_string_split = date_string.split(' ')
@@ -49,13 +27,14 @@ def days_until(date):
 	today = datetime.now()
 	#subtracts 1 to remove counting today as a date in the difference
 	real_day = today.replace(day=today.day-1)
-	#diff = real_date - today 
+	#diff = real_date - today
 	real_diff = real_date - real_day
 	return real_diff
-		 
+
 
 def checkpopularity(instausername):
-	url = "https://www.instagram.com/" + instausername
+        #TODO: this doesn't work anymore, need to fix this
+        url = "https://www.instagram.com/" + instausername
 	userpage = requests.get(url)
 	tree = html.fromstring(userpage.content)
 	string = tree.xpath('//script')[6].text
@@ -70,7 +49,7 @@ def checkpopularity(instausername):
 	print("Username: %s" % username)
 	print("Followers: %s" % followers)
 	print ("Follows: %s"% follows)
-	print("Last post: %s" % last_post) 
+	print("Last post: %s" % last_post)
 	print("Follower/Following Proportion: %s" % pop_percent)
 	# Weights username by recency of last post
 	if last_post.days <  5:
@@ -79,9 +58,9 @@ def checkpopularity(instausername):
 		multiplier = 2
 	elif last_post.days >=  7 and last_post.days < 14:
 		multiplier = 1
-	else: 
+	else:
 		multiplier = 0.5
-	score = multiplier * pop_percent	
+	score = multiplier * pop_percent
 	print("Score: %s" % score)
 	print("\n")
 	return score
@@ -111,69 +90,54 @@ def gethashtag():
 	#get the number of pictures in this page(varies)
 	parsed_json = json.loads(string)
 	for i in range(picturecount):
-		picurl = parsed_json["entry_data"]["TagPage"][0]["tag"]["media"]["nodes"][i]["code"] 
+		picurl = parsed_json["entry_data"]["TagPage"][0]["tag"]["media"]["nodes"][i]["code"]
 		#prints instagram.com/p/$PICURL
 		getusername(picurl)
 
-# TODO: Request column titles from user if not running this automatically...How to sense that?
-instascore_column = "Instascore"
-username = "Username"
 
 def column_finder(title):
 	column = worksheet.find(title)
 	column_letter = chr(column.col + 96)
 	return column_letter
 
-instascore_character = column_finder(instascore_column)
-username_character = column_finder(username)
-cell_count = count_occupied_cells()
+if __name__ == '__main__':
+    gc = login_gs.login()
+    #TODO: Request filename from user
+    sh = gc.open("Instascore Test")
+    worksheet = sh.get_worksheet(0)
 
-username_range = worksheet.range(("%s2:%s%s") % (username_character,username_character, cell_count))
+    starttime = datetime.now()
+    starttime_string = str(starttime)
 
-updated_count = 0
-for cell in username_range:	
-	value = cell.value
-	try:
-		score = checkpopularity(value)
-	except (IndexError, TypeError) as e:
-		score = "N/A"
-	instascore_row = '%s%s' % (instascore_character, cell.row)
-	#TODO: Change below to only use instascore_row
-	worksheet.update_acell('%s%s' % (instascore_character, cell.row), score)
-	updated_count +=1
-
-endtime = datetime.now()
-endtime_string = str(endtime)
-total_time = endtime - starttime
-total_time_string = str(total_time)
-
-print(("Finished updating %s rows at %s. Update took %s.\n") % (updated_count, endtime_string, total_time_string))
-		
-"""
-def get_columnname():
-	columnname = input("What is the column name? ")
-	
-
-# Used to find the column to pull the data from	
-def column_finder(title):
-	title = getcolumnname()
-	column = worksheet.find(title)
-	column_letter = chr(column.col + 96)
-	print(column_letter)
-	return column_letter
-"""
-	
+    print(("Starting to go through sheet at %s...") % (starttime_string))
+    # TODO: Also make this non hard coded in the future, pull range using similar function as below
+    title_row = worksheet.range('A1:P1')
 
 
+    # TODO: Request column titles from user if not running this automatically...How to sense that?
+    instascore_column = "Instascore"
+    username = "Username"
+    instascore_character = column_finder(instascore_column)
+    username_character = column_finder(username)
+    cell_count = count_occupied_cells()
 
-#def instascore(): 
+    username_range = worksheet.range(("%s2:%s%s") % (username_character,username_character, cell_count))
 
-#gethashtag()
-"""
-def main():
-	docslogin()
-	get_columnname()
-	column_finder()
-	
-___if___ = main()
-"""
+    updated_count = 0
+    for cell in username_range:
+            value = cell.value
+            try:
+                    score = checkpopularity(value)
+            except (IndexError, TypeError) as e:
+                    score = "N/A"
+            instascore_row = '%s%s' % (instascore_character, cell.row)
+            #TODO: Change below to only use instascore_row
+            worksheet.update_acell('%s%s' % (instascore_character, cell.row), score)
+            updated_count +=1
+
+    endtime = datetime.now()
+    endtime_string = str(endtime)
+    total_time = endtime - starttime
+    total_time_string = str(total_time)
+
+    print(("Finished updating %s rows at %s. Update took %s.\n") % (updated_count, endtime_string, total_time_string))
